@@ -1,0 +1,78 @@
+import numpy as np
+from tensorflow.keras import datasets, layers, models
+from tensorflow.keras.layers import Input,Conv2D,BatchNormalization,MaxPooling2D,Dropout,Flatten
+from tensorflow.keras.models import Sequential      #This allows appending layers to existing models
+from tensorflow.keras.layers import Dense           #This allows defining the characteristics of a particular layer
+from tensorflow.keras import optimizers             #This allows using whichever optimiser we want (sgd,adam,RMSprop)
+from tensorflow.keras import regularizers           #This allows using whichever regularizer we want (l1,l2,l1_l2)
+from tensorflow.keras.callbacks import ModelCheckpoint
+from tensorflow.keras.utils import to_categorical 
+import tensorflow as tf
+import time
+from datetime import timedelta
+
+eta=0.001
+lmbd=0.0001
+dropout_rate_c=0.4
+dropout_rate_f=0.15
+
+model_CNN = Sequential()
+model_CNN.add(Conv2D(32,(3,3),activation='relu',kernel_regularizer=regularizers.l2(lmbd),
+                     input_shape=(48, 48,1)))
+model_CNN.add(BatchNormalization())
+model_CNN.add(MaxPooling2D(pool_size=(2, 2)))
+model_CNN.add(Dropout(dropout_rate_c))
+
+model_CNN.add(Conv2D(64,(4,4),activation='relu',kernel_regularizer=regularizers.l2(lmbd)))
+model_CNN.add(BatchNormalization())
+model_CNN.add(MaxPooling2D(pool_size=(2, 2)))
+model_CNN.add(Dropout(dropout_rate_c))
+
+model_CNN.add(Conv2D(128,(3,3),activation='relu',kernel_regularizer=regularizers.l2(lmbd)))
+model_CNN.add(BatchNormalization())
+model_CNN.add(MaxPooling2D(pool_size=(2, 2)))
+model_CNN.add(Dropout(dropout_rate_c))
+
+model_CNN.add(Conv2D(128,(3,3),activation='relu',kernel_regularizer=regularizers.l2(lmbd)))
+model_CNN.add(BatchNormalization())
+model_CNN.add(Dropout(dropout_rate_c))
+
+model_CNN.add(Flatten())
+
+model_CNN.add(Dense(240,activation='relu',kernel_regularizer=regularizers.l2(lmbd)))
+model_CNN.add(Dropout(dropout_rate_f))
+
+model_CNN.add(Dense(120,activation='relu',kernel_regularizer=regularizers.l2(lmbd)))
+model_CNN.add(Dropout(dropout_rate_f))
+
+model_CNN.add(Dense(60,activation='relu',kernel_regularizer=regularizers.l2(lmbd)))
+model_CNN.add(Dropout(dropout_rate_f))
+
+model_CNN.add(Dense(n_categories, activation='softmax',kernel_regularizer=regularizers.l2(lmbd)))
+
+opt = optimizers.Adam(learning_rate=eta)
+
+model_CNN.compile(optimizer=opt, loss='categorical_crossentropy', metrics=['accuracy'])
+model_CNN.summary()
+
+checkpoint = ModelCheckpoint(
+    filepath='./checkpoints/checkpoint_CNN.keras',
+    monitor='val_accuracy',
+    mode='max',
+    save_best_only=True
+)
+
+start=time.time()
+np.random.seed(323)
+
+history = model_CNN.fit(
+    X_train/255.,
+    Y_train_vec,
+    epochs=50,
+    validation_data=(X_test/255., Y_test_vec),
+    batch_size=64,
+    verbose=2,
+    callbacks=[checkpoint]
+)
+
+end=time.time()
